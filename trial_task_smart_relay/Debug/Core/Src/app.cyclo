@@ -1,2 +1,5 @@
-../Core/Src/app.c:12:6:App_Init	1
-../Core/Src/app.c:19:6:HAL_GPIO_EXTI_Callback	2
+../Core/Src/app.c:34:6:App_Init	1
+../Core/Src/app.c:40:6:App_Loop	3
+../Core/Src/app.c:59:13:HandleIdleState	1
+../Core/Src/app.c:80:13:HandleRunState	2
+../Core/Src/app.c:98:6:HAL_GPIO_EXTI_Callback	2

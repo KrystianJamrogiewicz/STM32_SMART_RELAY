@@ -18,6 +18,11 @@ extern "C" {
 // Application I/O initial state setup
 void App_Init(void);
 
+// Application main loop
+void App_Loop(void);
+
+
+
 #ifdef __cplusplus
 }
 #endif

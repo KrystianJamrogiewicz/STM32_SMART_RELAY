@@ -101,6 +101,8 @@ int main(void)
   while (1)
   {
 
+	  App_Loop();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

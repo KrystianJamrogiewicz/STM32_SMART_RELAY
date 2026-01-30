@@ -1,0 +1,50 @@
+/*
+ * app.c
+ *
+ *  Created on: Jan 29, 2026
+ *      Author: kryst
+ */
+
+#include "app.h"
+#include "stdbool.h"
+
+// Definition of system states
+typedef enum {
+	STATE_IDLE,		// OFF
+	STATE_RUN		// ON
+} SystemState_t;
+
+// Setting the state when power is connected
+static SystemState_ts currentState = STATE_IDLE;
+
+static volatile bool buttonPressedFlag = false;
+
+
+/* Public functions */
+
+// Application I/O initial state setup
+void App_Init(void)
+{
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+}
+
+
+
+
+
+
+/* File-local (static) function */
+
+
+
+
+// Interrupt service function
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+
+	// Button press interrupt
+    if (GPIO_Pin == BUTTON_Pin)
+    {
+        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    }
+}

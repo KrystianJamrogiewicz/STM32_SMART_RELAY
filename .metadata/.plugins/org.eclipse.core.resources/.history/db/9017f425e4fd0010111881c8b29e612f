@@ -1,0 +1,89 @@
+/*
+ * app.c
+ *
+ *  Created on: Jan 29, 2026
+ *      Author: kryst
+ */
+
+#include "app.h"
+#include "stdbool.h"
+
+
+// Definition of system states
+typedef enum {
+	STATE_IDLE,		// OFF
+	STATE_RUN		// ON
+} SystemState_t;
+
+// Setting the state when power is connected
+static SystemState_ts currentState = STATE_IDLE;
+
+static volatile bool buttonPressedFlag = false;
+
+
+/* Public functions */
+
+// Application I/O initial state setup
+void App_Init(void)
+{
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+}
+
+// Application main loop
+void App_Loop(void)
+{
+	switch (currentState)
+	{
+		//
+		case STATE_IDLE:
+			HandleIdleState();
+			break;
+
+		case STATE_RUN:
+			HandleRunState();
+			break;
+
+	}
+
+}
+
+
+/* File-local (static) function */
+
+static void HandleIdleState(void)
+{
+	// LED OFF
+	HAL_GPIO_WritePin(LED_GPIO_PortD, LED_Pin, GPIO_PIN_SET);
+
+	buttonPressedFlag = false;
+
+	// Sleep procedure
+	HAL_SuspendTick();
+	HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI);
+
+	// Awakening procedure
+	SystemClock_Config();
+	HAL_ResumeTick();
+
+	currentState = STATE_RUN;
+	buttonPressedFlag = false;
+}
+
+
+
+static void HandleRunState(void);
+
+
+
+
+
+// Interrupt service function
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+
+	// Button press interrupt
+    if (GPIO_Pin == BUTTON_Pin)
+    {
+    	buttonPressedFlag = true;
+    }
+}

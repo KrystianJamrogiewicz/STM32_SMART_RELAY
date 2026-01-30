@@ -1,2 +1,5 @@
-../Core/Src/app.c:12:6:App_Init	8	static
-../Core/Src/app.c:19:6:HAL_GPIO_EXTI_Callback	16	static
+../Core/Src/app.c:34:6:App_Init	8	static
+../Core/Src/app.c:40:6:App_Loop	8	static
+../Core/Src/app.c:59:13:HandleIdleState	8	static
+../Core/Src/app.c:80:13:HandleRunState	8	static
+../Core/Src/app.c:98:6:HAL_GPIO_EXTI_Callback	16	static

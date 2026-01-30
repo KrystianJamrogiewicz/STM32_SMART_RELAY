@@ -1,0 +1,27 @@
+/*
+ * app.c
+ *
+ *  Created on: Jan 29, 2026
+ *      Author: kryst
+ */
+
+#include "app.h"
+
+
+// Application I/O initial state setup
+void App_Init(void)
+{
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+}
+
+
+// Interrupt service function
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+
+	// Button press interrupt
+    if (GPIO_Pin == BUTTON_Pin)
+    {
+        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    }
+}
