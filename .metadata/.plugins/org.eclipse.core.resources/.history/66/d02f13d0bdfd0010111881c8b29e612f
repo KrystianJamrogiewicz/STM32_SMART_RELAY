@@ -1,0 +1,29 @@
+/*
+ * app.c
+ *
+ *  Created on: Jan 29, 2026
+ *      Author: kryst
+ */
+
+#include "app.h"
+
+// --- Funkcja Inicjalizująca ---
+void App_Init(void)
+{
+    // Na start zgaś diodę (Dla Blackpill: Stan Wysoki = LED OFF)
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+}
+
+// --- OBSŁUGA PRZERWANIA (INTERRUPT CALLBACK) ---
+// Ta funkcja wykonuje się SAMA, gdy naciśniesz przycisk.
+// Nie musisz jej nigdzie wywoływać w main()!
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    // Sprawdzamy, czy to na pewno nasz przycisk wywołał alarm
+    if (GPIO_Pin == BUTTON_Pin)
+    {
+        // PROSTY TEST:
+        // Zmień stan diody na przeciwny (Jak świeci -> zgaś, jak zgaszona -> zapal)
+        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    }
+}

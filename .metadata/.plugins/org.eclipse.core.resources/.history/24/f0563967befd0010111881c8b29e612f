@@ -1,0 +1,26 @@
+/*
+ * app.h
+ *
+ *  Created on: Jan 29, 2026
+ *      Author: kryst
+ */
+
+#ifndef INC_APP_H_
+#define INC_APP_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Dołączamy main.h, żeby znać nazwy pinów (BUTTON_Pin, LED_Pin)
+#include "main.h"
+
+// Funkcja startowa
+void App_Init(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif /* INC_APP_H_ */

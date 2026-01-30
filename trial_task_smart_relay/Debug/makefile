@@ -60,8 +60,8 @@ all: main-build
 main-build: trial_task_smart_relay.elf secondary-outputs
 
 # Tool invocations
-trial_task_smart_relay.elf trial_task_smart_relay.map: $(OBJS) $(USER_OBJS) D:\Dokumenty\jamro\Projekty\Programowanie\STM32\trial_task_smart_relay\STM32F411CEUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "trial_task_smart_relay.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Dokumenty\jamro\Projekty\Programowanie\STM32\trial_task_smart_relay\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="trial_task_smart_relay.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+trial_task_smart_relay.elf trial_task_smart_relay.map: $(OBJS) $(USER_OBJS) D:\Dokumenty\jamro\Projekty\Programowanie\embeded\Trial_task_Firmware_Engineer\trial_task_smart_relay\STM32F411CEUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "trial_task_smart_relay.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Dokumenty\jamro\Projekty\Programowanie\embeded\Trial_task_Firmware_Engineer\trial_task_smart_relay\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="trial_task_smart_relay.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

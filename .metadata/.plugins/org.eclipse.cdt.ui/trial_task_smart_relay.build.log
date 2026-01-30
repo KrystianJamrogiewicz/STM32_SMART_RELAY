@@ -1,0 +1,10 @@
+10:55:45 **** Incremental Build of configuration Debug for project trial_task_smart_relay ****
+make -j16 all 
+arm-none-eabi-size  trial_task_smart_relay.elf 
+   text	   data	    bss	    dec	    hex	filename
+   7588	     12	   1644	   9244	   241c	trial_task_smart_relay.elf
+Finished building: default.size.stdout
+ 
+
+10:55:45 Build Finished. 0 errors, 0 warnings. (took 197ms)
+
