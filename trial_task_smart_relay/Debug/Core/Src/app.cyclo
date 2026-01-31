@@ -1,5 +1,7 @@
-../Core/Src/app.c:34:6:App_Init	1
-../Core/Src/app.c:40:6:App_Loop	3
-../Core/Src/app.c:59:13:HandleIdleState	1
-../Core/Src/app.c:80:13:HandleRunState	2
-../Core/Src/app.c:98:6:HAL_GPIO_EXTI_Callback	2
+../Core/Src/app.c:55:6:App_Init	1
+../Core/Src/app.c:65:6:App_Loop	3
+../Core/Src/app.c:86:13:HandleIdleState	1
+../Core/Src/app.c:109:13:HandleRunState	3
+../Core/Src/app.c:141:22:CheckButtonEvent	5
+../Core/Src/app.c:174:17:ManageRelayInterval	4
+../Core/Src/app.c:201:6:HAL_GPIO_EXTI_Callback	2
