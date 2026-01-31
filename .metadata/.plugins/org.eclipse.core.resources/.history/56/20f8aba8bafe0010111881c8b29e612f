@@ -1,0 +1,317 @@
+/*
+ * app.c
+ *
+ *  Created on: Jan 29, 2026
+ *      Author: kryst
+ */
+
+#include "app.h"
+#include "stdbool.h"
+#include "adc.h"
+
+extern void SystemClock_Config(void);
+
+
+// Definition of system states
+typedef enum {
+	STATE_IDLE,			// OFF
+	STATE_RUN,			// ON
+	STATE_BATTERY_LOW   // Battery LOW voltage
+} SystemState_t;
+// Setting the state when power is connected
+static SystemState_t currentState = STATE_IDLE;
+
+
+// Definition of button events
+typedef enum {
+    BUTTON_NONE,   // Button not pressed
+	BUTTON_SHORT,  // Button short press
+	BUTTON_LONG    // Button long press
+} ButtonEvent_t;
+static volatile bool buttonPressedFlag = false;
+
+
+								/*-----------------------------------*/
+								/*     APPLICATION CONFIGURATION     */
+/*---------------------------------------------------------------------------------------------------*/
+static const uint32_t BUTTON_LONG_PRESS_TIME_MS = 2000;			// Time defining long button press [ms]
+
+// Relay switching times (mode change after long button press)
+static const uint32_t RELAY_INTERVAL_1_MS = 1000;				// Time in mod 1 [ms]
+static const uint32_t RELAY_INTERVAL_2_MS = 10000;				// Time in mod 2 [ms]
+
+static const float BATTERY_LOW_THRESHOLD_V = 3.3f;				// Alarm trigger voltage: Low Battery [V]
+static const float BATTERY_OK_THRESHOLD_V = 3.4f;				// Trigger voltage: Battery OK [V]
+static const float BATTERY_DEAD_THRESHOLD_V = 3.2f;				// Trigger voltage: Battery dead [V]
+/*---------------------------------------------------------------------------------------------------*/
+
+
+
+static void HandleIdleState(void);
+static void HandleRunState(void);
+static void HandleBatteryLowState(void);
+static ButtonEvent_t CheckButtonEvent(void);
+static uint32_t ManageRelayInterval(ButtonEvent_t buttonEvent);
+static float GetBatteryVoltage(void);
+
+
+
+/* Public functions */
+						/*-----------------------------------------------*/
+						/*      APPLICATION I/O INITIAL STATE SETUP      */
+						/*-----------------------------------------------*/
+void App_Init(void)
+{
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET); 	 // LED OFF
+    HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_RESET); // RELAY OFF
+}
+
+
+						    	/*--------------------------------*/
+					    		/*      APPLICATION MAIN LOOP     */
+					    		/*--------------------------------*/
+void App_Loop(void)
+{
+	// State selection: IDLE / RUN
+	switch (currentState)
+	{
+		case STATE_IDLE:
+			HandleIdleState();
+			break;
+
+		case STATE_RUN:
+			HandleRunState();
+			break;
+
+		case STATE_BATTERY_LOW:
+			HandleBatteryLowState();
+			break;
+	}
+}
+
+
+/* File local (static) function */
+
+								/*----------------------------*/
+								/*     HANDLES IDLE STATE     */
+								/*----------------------------*/
+static void HandleIdleState(void)
+{
+	buttonPressedFlag = false;
+
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET); 	 // LED OFF
+	HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_SET); // RELAY OFF
+
+	// Sleep procedure
+	HAL_SuspendTick(); // Disable SysTick interrupt
+	HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI); // Enter STOP mode (wait for interrupt)
+
+	// Awakening procedure
+	SystemClock_Config(); // Restore the previous high speed clock configuration
+	HAL_ResumeTick(); 	  // Enable SysTick interrupt
+
+	// Enter RUN state
+	buttonPressedFlag = false;
+	currentState = STATE_RUN;
+}
+
+								/*-----------------------------*/
+								/*      HANDLES RUN STATE      */
+								/*-----------------------------*/
+static void HandleRunState(void)
+{
+	ButtonEvent_t currentButtonEvent = CheckButtonEvent();
+	uint32_t currentRelayInterval = ManageRelayInterval(currentButtonEvent);
+	static uint32_t lastRelayTime = 0;
+	static uint32_t lastBatteryCheckTime = 0;
+
+	//Operation logic
+
+	// BATTERY
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
+	{
+		float currentBatteryVoltage = GetBatteryVoltage();
+
+		// Enter to BATTERY LOW state
+		if (currentBatteryVoltage < BATTERY_LOW_THRESHOLD_V)
+		{
+			buttonPressedFlag = false;
+	     	currentState = STATE_BATTERY_LOW;
+	     	return;
+		}
+		lastBatteryCheckTime = HAL_GetTick();
+	}
+
+	// RELAY
+	if (HAL_GetTick() - lastRelayTime >= currentRelayInterval)
+	{
+		// RELAY
+		HAL_GPIO_TogglePin(RELAY_GPIO_Port, RELAY_Pin);
+
+		// LED
+		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, !HAL_GPIO_ReadPin(RELAY_GPIO_Port, RELAY_Pin));
+
+		lastRelayTime = HAL_GetTick();
+	}
+
+	// Enter IDLE state
+	if (currentButtonEvent == BUTTON_SHORT)
+		{
+			buttonPressedFlag = false;
+	     	currentState = STATE_IDLE;
+	     	HAL_Delay(500);
+	     	return;
+	    }
+}
+
+							/*------------------------------------*/
+							/*      HANDLES BATTERY LOW STATE     */
+							/*------------------------------------*/
+static void HandleBatteryLowState(void)
+{
+	ButtonEvent_t currentButtonEvent = CheckButtonEvent();
+	static uint32_t lastLedTime = 0;
+	static uint32_t lastBatteryCheckTime = 0;
+
+	HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_SET); // RELAY OFF
+
+	// Low battery alarm (LED blinking)
+	if (HAL_GetTick() - lastLedTime >= 200)
+	{
+		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		lastLedTime = HAL_GetTick();
+	}
+
+	// Check battery voltage
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
+	{
+		float currentBatteryVoltage = GetBatteryVoltage();
+
+		// Enter to RUN state - appropriate battery voltage
+		if (currentBatteryVoltage >= BATTERY_OK_THRESHOLD_V)
+		{
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET); // LED OFF
+			buttonPressedFlag = false;
+	     	currentState = STATE_RUN;
+	     	return;
+		}
+
+		// Enter to IDLE state - battery dead
+		if (currentBatteryVoltage < BATTERY_DEAD_THRESHOLD_V)
+		{
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET); // LED OFF
+			buttonPressedFlag = false;
+	     	currentState = STATE_IDLE;
+	     	return;
+		}
+		lastBatteryCheckTime = HAL_GetTick();
+	}
+
+	// Check button event
+	// Enter IDLE state
+	if (currentButtonEvent == BUTTON_SHORT || BUTTON_LONG)
+		{
+			buttonPressedFlag = false;
+	     	currentState = STATE_IDLE;
+	     	HAL_Delay(500);
+	     	return;
+	    }
+}
+
+
+
+						/* FUNCTIONS CALLED FROM STATES HANDLERS */
+
+// Button status detection
+static ButtonEvent_t CheckButtonEvent(void)
+{
+	if (!buttonPressedFlag)
+	{
+		return BUTTON_NONE;
+	}
+
+	uint32_t lastButtonPressTime = HAL_GetTick();
+	bool isLongPress = false;
+
+	while (HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin) == false)
+	{
+		if (HAL_GetTick() - lastButtonPressTime >= BUTTON_LONG_PRESS_TIME_MS)
+		{
+			isLongPress = true;
+			break;
+		}
+	}
+
+	buttonPressedFlag = false;
+
+	if (isLongPress)
+	{
+		return BUTTON_LONG;
+	}
+	else
+	{
+		return BUTTON_SHORT;
+	}
+}
+
+
+// Relay control timing management
+static uint32_t ManageRelayInterval(ButtonEvent_t buttonEvent)
+{
+	static uint32_t currentInterval = RELAY_INTERVAL_1_MS;
+
+	if (buttonEvent == BUTTON_LONG)
+	{
+		if (currentInterval == RELAY_INTERVAL_1_MS)
+		{
+			currentInterval = RELAY_INTERVAL_2_MS;
+		}
+		else
+		{
+			currentInterval = RELAY_INTERVAL_1_MS;
+		}
+
+		// LED blinking indicating mode change
+		for(int i=0; i<6; i++)
+		{
+			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+			HAL_Delay(50);
+		}
+	}
+	return currentInterval;
+}
+
+
+// Battery voltage reading
+static float GetBatteryVoltage(void)
+{
+	HAL_ADC_Start(&hadc1);
+	const float adcResolution = 4095.0f;
+	const float adcReferenceVoltage = 3.3f;
+
+	const float R1 = 10000.0f; // Rezystor od Plusa do Pinu
+	const float R2 = 10000.0f; // Rezystor od Pinu do Masy
+
+	const float voltageDividerRatio = (R1 + R2) / R2;
+
+	if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+	{
+		uint32_t rawValue = HAL_ADC_GetValue(&hadc1);
+
+		float pinVoltage = ((float)rawValue / adcResolution) * adcReferenceVoltage;
+		return pinVoltage * voltageDividerRatio;
+	    }
+	    return 0.0f;
+}
+
+
+// Interrupt service function
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+
+	// Button press interrupt
+    if (GPIO_Pin == BUTTON_Pin)
+    {
+    	buttonPressedFlag = true;
+    }
+}

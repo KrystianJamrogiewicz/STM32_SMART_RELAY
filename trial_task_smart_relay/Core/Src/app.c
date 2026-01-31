@@ -7,15 +7,23 @@
 
 #include "app.h"
 #include "stdbool.h"
+#include "adc.h"
 
 extern void SystemClock_Config(void);
 
 
+// LOGIC ACTIVE LOW (SET = 0V, RESET = 3.3V)
+#define POWER_ON    GPIO_PIN_RESET
+#define POWER_OFF   GPIO_PIN_SET
+
+
 // Definition of system states
 typedef enum {
-	STATE_IDLE,		// OFF
-	STATE_RUN		// ON
+	STATE_IDLE,			// OFF
+	STATE_RUN,			// ON
+	STATE_BATTERY_LOW   // Battery LOW voltage
 } SystemState_t;
+
 // Setting the state when power is connected
 static SystemState_t currentState = STATE_IDLE;
 
@@ -26,6 +34,7 @@ typedef enum {
 	BUTTON_SHORT,  // Button short press
 	BUTTON_LONG    // Button long press
 } ButtonEvent_t;
+
 static volatile bool buttonPressedFlag = false;
 
 
@@ -37,14 +46,21 @@ static const uint32_t BUTTON_LONG_PRESS_TIME_MS = 2000;			// Time defining long 
 // Relay switching times (mode change after long button press)
 static const uint32_t RELAY_INTERVAL_1_MS = 1000;				// Time in mod 1 [ms]
 static const uint32_t RELAY_INTERVAL_2_MS = 10000;				// Time in mod 2 [ms]
+
+// Battery thresholds for 4.2V
+static const float BATTERY_LOW_THRESHOLD_V = 3.3f;				// Alarm trigger voltage: Low Battery [V]
+static const float BATTERY_OK_THRESHOLD_V = 3.4f;				// Trigger voltage: Battery OK [V]
+// static const float BATTERY_DEAD_THRESHOLD_V = 3.2f;				// Trigger voltage: Battery dead [V]
 /*---------------------------------------------------------------------------------------------------*/
 
 
 
 static void HandleIdleState(void);
 static void HandleRunState(void);
+static void HandleBatteryLowState(void);
 static ButtonEvent_t CheckButtonEvent(void);
 static uint32_t ManageRelayInterval(ButtonEvent_t buttonEvent);
+static float GetBatteryVoltage(void);
 
 
 
@@ -54,8 +70,8 @@ static uint32_t ManageRelayInterval(ButtonEvent_t buttonEvent);
 						/*-----------------------------------------------*/
 void App_Init(void)
 {
-    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET); 	 // LED OFF
-    HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_RESET); // RELAY OFF
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, POWER_OFF); 	 	// LED OFF
+    HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, POWER_OFF); 	// RELAY OFF
 }
 
 
@@ -74,6 +90,10 @@ void App_Loop(void)
 		case STATE_RUN:
 			HandleRunState();
 			break;
+
+		case STATE_BATTERY_LOW:
+			HandleBatteryLowState();
+			break;
 	}
 }
 
@@ -87,8 +107,8 @@ static void HandleIdleState(void)
 {
 	buttonPressedFlag = false;
 
-	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET); 	 // LED OFF
-	HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, GPIO_PIN_SET); // RELAY OFF
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, POWER_OFF); 	 // LED OFF
+	HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, POWER_OFF); // RELAY OFF
 
 	// Sleep procedure
 	HAL_SuspendTick(); // Disable SysTick interrupt
@@ -111,8 +131,26 @@ static void HandleRunState(void)
 	ButtonEvent_t currentButtonEvent = CheckButtonEvent();
 	uint32_t currentRelayInterval = ManageRelayInterval(currentButtonEvent);
 	static uint32_t lastRelayTime = 0;
+	static uint32_t lastBatteryCheckTime = 0;
 
 	//Operation logic
+
+	// BATTERY
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
+	{
+		float currentBatteryVoltage = GetBatteryVoltage();
+
+		// Enter to BATTERY LOW state
+		if (currentBatteryVoltage < BATTERY_LOW_THRESHOLD_V)
+		{
+			buttonPressedFlag = false;
+	     	currentState = STATE_BATTERY_LOW;
+	     	return;
+		}
+		lastBatteryCheckTime = HAL_GetTick();
+	}
+
+	// RELAY
 	if (HAL_GetTick() - lastRelayTime >= currentRelayInterval)
 	{
 		// RELAY
@@ -129,13 +167,71 @@ static void HandleRunState(void)
 		{
 			buttonPressedFlag = false;
 	     	currentState = STATE_IDLE;
-	     	HAL_Delay(500);
+	     	HAL_Delay(100);
+	     	return;
+	    }
+}
+
+							/*------------------------------------*/
+							/*      HANDLES BATTERY LOW STATE     */
+							/*------------------------------------*/
+static void HandleBatteryLowState(void)
+{
+	ButtonEvent_t currentButtonEvent = CheckButtonEvent();
+	static uint32_t lastLedTime = 0;
+	static uint32_t lastBatteryCheckTime = 0;
+
+	HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, POWER_OFF); // RELAY OFF
+
+	// Low battery alarm (LED blinking)
+	if (HAL_GetTick() - lastLedTime >= 200)
+	{
+		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		lastLedTime = HAL_GetTick();
+	}
+
+	// Check battery voltage
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
+	{
+		float currentBatteryVoltage = GetBatteryVoltage();
+
+		// Enter to RUN state - appropriate battery voltage
+		if (currentBatteryVoltage >= BATTERY_OK_THRESHOLD_V)
+		{
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, POWER_OFF); // LED OFF
+			buttonPressedFlag = false;
+	     	currentState = STATE_RUN;
+	     	return;
+		}
+
+		/*
+		// Enter to IDLE state - battery dead
+		if (currentBatteryVoltage < BATTERY_DEAD_THRESHOLD_V)
+		{
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, POWER_OFF); // LED OFF
+			buttonPressedFlag = false;
+	     	currentState = STATE_IDLE;
+	     	return;
+		}
+		*/
+
+		lastBatteryCheckTime = HAL_GetTick();
+	}
+
+	// Check button event
+	// Enter IDLE state
+	if (currentButtonEvent == BUTTON_SHORT || currentButtonEvent == BUTTON_LONG)
+		{
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, POWER_OFF); // LED OFF
+			buttonPressedFlag = false;
+	     	currentState = STATE_IDLE;
+	     	HAL_Delay(100);
+	     	return;
 	    }
 }
 
 
-
-						/* FUNCTIONS CALLED FROM IDLE OR RUN STATE HANDLERS */
+						/* FUNCTIONS CALLED FROM STATES HANDLERS */
 
 // Button status detection
 static ButtonEvent_t CheckButtonEvent(void)
@@ -194,6 +290,29 @@ static uint32_t ManageRelayInterval(ButtonEvent_t buttonEvent)
 		}
 	}
 	return currentInterval;
+}
+
+
+// Battery voltage reading
+static float GetBatteryVoltage(void)
+{
+	HAL_ADC_Start(&hadc1);
+	const float adcResolution = 4095.0f;
+	const float adcReferenceVoltage = 3.3f;
+
+	const float R1 = 100000.0f; // Resistor from battery + to Pin
+	const float R2 = 100000.0f; // Resistor from Pin to GND
+
+	const float voltageDividerRatio = (R1 + R2) / R2;
+
+	if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+	{
+		uint32_t rawValue = HAL_ADC_GetValue(&hadc1);
+
+		float pinVoltage = ((float)rawValue / adcResolution) * adcReferenceVoltage;
+		return pinVoltage * voltageDividerRatio;
+	    }
+	    return 0.0f;
 }
 
 
