@@ -9,6 +9,8 @@
 #include "stdbool.h"
 #include "adc.h"
 
+volatile float DEBUG_BATTERY_VOLTAGE = 0.0f; // DEBUG
+
 extern void SystemClock_Config(void);
 
 
@@ -47,9 +49,10 @@ static const uint32_t BUTTON_LONG_PRESS_TIME_MS = 2000;			// Time defining long 
 static const uint32_t RELAY_INTERVAL_1_MS = 1000;				// Time in mod 1 [ms]
 static const uint32_t RELAY_INTERVAL_2_MS = 10000;				// Time in mod 2 [ms]
 
-// Battery thresholds
+// Battery thresholds for 4.2V
 static const float BATTERY_LOW_THRESHOLD_V = 3.3f;				// Alarm trigger voltage: Low Battery [V]
 static const float BATTERY_OK_THRESHOLD_V = 3.4f;				// Trigger voltage: Battery OK [V]
+// static const float BATTERY_DEAD_THRESHOLD_V = 3.2f;				// Trigger voltage: Battery dead [V]
 /*---------------------------------------------------------------------------------------------------*/
 
 
@@ -110,12 +113,12 @@ static void HandleIdleState(void)
 	HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, POWER_OFF); // RELAY OFF
 
 	// Sleep procedure
-	HAL_SuspendTick(); // Disable SysTick interrupt
-	HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI); // Enter STOP mode (wait for interrupt)
+//	HAL_SuspendTick(); // Disable SysTick interrupt
+//	HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI); // Enter STOP mode (wait for interrupt)
 
 	// Awakening procedure
-	SystemClock_Config(); // Restore the previous high speed clock configuration
-	HAL_ResumeTick(); 	  // Enable SysTick interrupt
+//	SystemClock_Config(); // Restore the previous high speed clock configuration
+//	HAL_ResumeTick(); 	  // Enable SysTick interrupt
 
 	// Enter RUN state
 	buttonPressedFlag = false;
@@ -135,7 +138,7 @@ static void HandleRunState(void)
 	//Operation logic
 
 	// BATTERY
-	if (HAL_GetTick() - lastBatteryCheckTime >= 2000)
+	if (HAL_GetTick() - lastBatteryCheckTime >= 500)
 	{
 		float currentBatteryVoltage = GetBatteryVoltage();
 
@@ -190,7 +193,7 @@ static void HandleBatteryLowState(void)
 	}
 
 	// Check battery voltage
-	if (HAL_GetTick() - lastBatteryCheckTime >= 2000)
+	if (HAL_GetTick() - lastBatteryCheckTime >= 500)
 	{
 		float currentBatteryVoltage = GetBatteryVoltage();
 
@@ -202,6 +205,17 @@ static void HandleBatteryLowState(void)
 	     	currentState = STATE_RUN;
 	     	return;
 		}
+
+		/*
+		// Enter to IDLE state - battery dead
+		if (currentBatteryVoltage < BATTERY_DEAD_THRESHOLD_V)
+		{
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, POWER_OFF); // LED OFF
+			buttonPressedFlag = false;
+	     	currentState = STATE_IDLE;
+	     	return;
+		}
+		*/
 
 		lastBatteryCheckTime = HAL_GetTick();
 	}
@@ -299,6 +313,8 @@ static float GetBatteryVoltage(void)
 
 		float pinVoltage = ((float)rawValue / adcResolution) * adcReferenceVoltage;
 		float finalVoltage = pinVoltage * voltageDividerRatio;
+
+		DEBUG_BATTERY_VOLTAGE = finalVoltage; // DEBUG
 
 		return finalVoltage;
 	    }
