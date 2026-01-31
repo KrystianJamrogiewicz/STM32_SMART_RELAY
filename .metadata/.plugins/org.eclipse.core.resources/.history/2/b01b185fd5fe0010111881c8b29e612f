@@ -138,7 +138,7 @@ static void HandleRunState(void)
 	//Operation logic
 
 	// BATTERY
-	if (HAL_GetTick() - lastBatteryCheckTime >= 500)
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
 	{
 		float currentBatteryVoltage = GetBatteryVoltage();
 
@@ -193,7 +193,7 @@ static void HandleBatteryLowState(void)
 	}
 
 	// Check battery voltage
-	if (HAL_GetTick() - lastBatteryCheckTime >= 500)
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
 	{
 		float currentBatteryVoltage = GetBatteryVoltage();
 

@@ -1,14 +1,35 @@
-18:56:37 **** Incremental Build of configuration Debug for project trial_task_smart_relay ****
+19:49:09 **** Incremental Build of configuration Debug for project trial_task_smart_relay ****
 make -j16 all 
+arm-none-eabi-gcc "../Core/Src/app.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/app.d" -MT"Core/Src/app.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/app.o"
+arm-none-eabi-gcc -o "trial_task_smart_relay.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\Dokumenty\jamro\Projekty\Programowanie\embeded\Trial_task_Firmware_Engineer\trial_task_smart_relay\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="trial_task_smart_relay.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: trial_task_smart_relay.elf
+ 
 arm-none-eabi-size  trial_task_smart_relay.elf 
+arm-none-eabi-objdump -h -S trial_task_smart_relay.elf  > "trial_task_smart_relay.list"
    text	   data	    bss	    dec	    hex	filename
-   9492	     16	   1664	  11172	   2ba4	trial_task_smart_relay.elf
+   9320	     16	   1664	  11000	   2af8	trial_task_smart_relay.elf
 Finished building: default.size.stdout
  
-18:56:41 **** Incremental Build of configuration Debug for project trial_task_smart_relay ****
+Finished building: trial_task_smart_relay.list
+ 
+19:49:14 **** Incremental Build of configuration Debug for project trial_task_smart_relay ****
 make -j16 all 
 arm-none-eabi-size  trial_task_smart_relay.elf 
    text	   data	    bss	    dec	    hex	filename
-   9492	     16	   1664	  11172	   2ba4	trial_task_smart_relay.elf
+   9320	     16	   1664	  11000	   2af8	trial_task_smart_relay.elf
+Finished building: default.size.stdout
+ 
+19:53:03 **** Incremental Build of configuration Debug for project trial_task_smart_relay ****
+make -j16 all 
+arm-none-eabi-size  trial_task_smart_relay.elf 
+   text	   data	    bss	    dec	    hex	filename
+   9320	     16	   1664	  11000	   2af8	trial_task_smart_relay.elf
+Finished building: default.size.stdout
+ 
+20:02:35 **** Incremental Build of configuration Debug for project trial_task_smart_relay ****
+make -j16 all 
+arm-none-eabi-size  trial_task_smart_relay.elf 
+   text	   data	    bss	    dec	    hex	filename
+   9320	     16	   1664	  11000	   2af8	trial_task_smart_relay.elf
 Finished building: default.size.stdout
  

@@ -9,8 +9,6 @@
 #include "stdbool.h"
 #include "adc.h"
 
-volatile float DEBUG_BATTERY_VOLTAGE = 0.0f; // DEBUG
-
 extern void SystemClock_Config(void);
 
 
@@ -113,12 +111,12 @@ static void HandleIdleState(void)
 	HAL_GPIO_WritePin(RELAY_GPIO_Port, RELAY_Pin, POWER_OFF); // RELAY OFF
 
 	// Sleep procedure
-//	HAL_SuspendTick(); // Disable SysTick interrupt
-//	HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI); // Enter STOP mode (wait for interrupt)
+	HAL_SuspendTick(); // Disable SysTick interrupt
+	HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI); // Enter STOP mode (wait for interrupt)
 
 	// Awakening procedure
-//	SystemClock_Config(); // Restore the previous high speed clock configuration
-//	HAL_ResumeTick(); 	  // Enable SysTick interrupt
+	SystemClock_Config(); // Restore the previous high speed clock configuration
+	HAL_ResumeTick(); 	  // Enable SysTick interrupt
 
 	// Enter RUN state
 	buttonPressedFlag = false;
@@ -138,7 +136,7 @@ static void HandleRunState(void)
 	//Operation logic
 
 	// BATTERY
-	if (HAL_GetTick() - lastBatteryCheckTime >= 500)
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
 	{
 		float currentBatteryVoltage = GetBatteryVoltage();
 
@@ -193,7 +191,7 @@ static void HandleBatteryLowState(void)
 	}
 
 	// Check battery voltage
-	if (HAL_GetTick() - lastBatteryCheckTime >= 500)
+	if (HAL_GetTick() - lastBatteryCheckTime >= 5000)
 	{
 		float currentBatteryVoltage = GetBatteryVoltage();
 
@@ -312,11 +310,7 @@ static float GetBatteryVoltage(void)
 		uint32_t rawValue = HAL_ADC_GetValue(&hadc1);
 
 		float pinVoltage = ((float)rawValue / adcResolution) * adcReferenceVoltage;
-		float finalVoltage = pinVoltage * voltageDividerRatio;
-
-		DEBUG_BATTERY_VOLTAGE = finalVoltage; // DEBUG
-
-		return finalVoltage;
+		return pinVoltage * voltageDividerRatio;
 	    }
 	    return 0.0f;
 }
