@@ -20,8 +20,4 @@ Delays are used in the code during:
 * entering sleep mode (for button debouncing)
 * changing the relay operating mode (for LED indication)
 
-State machine diagram:
-![State Machine Diagram](stateDiagram.png)
-
-
 
