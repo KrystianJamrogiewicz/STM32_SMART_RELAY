@@ -1,6 +1,6 @@
 # Dual-mode relay controller with battery status monitoring.
 
-
+Link to video demonstration: https://www.linkedin.com/posts/krystian-jamrogiewicz-8b3770280_stm32-stm32cubeide-statemachine-activity-7438691549200175105-r073?utm_source=share&utm_medium=member_desktop&rcm=ACoAAER00AcB6L5q64HzB6NpWSs6syZ06z8OhkU
 
 Development Environment: STM32CubeIDE
 
